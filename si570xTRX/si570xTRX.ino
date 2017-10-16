@@ -11,7 +11,7 @@ Revision 8.0 - December 12, 2016  - EK1A trx end revision. Setup last hardware c
 Revision 9.0 - January 07, 2017   - EK1A trx last revision. Remove not worked bands ... trx work well on 3.5, 5, 7, 10, 14 MHz (LZ1DPN mod)
 Revision 10.0 - March 13, 2017 	  - scan function (LZ1DPN mod)
 Revision 11.0 - June 22, 2017 	  - RIT + other - other (LZ1DPN mod)
-Revision 14.0 - Octomber 7, 2017  - support for Si570 for SDR cw Transmitter (LZ1DPN mod)
+Revision 15.0 - Octomber 7, 2017  - support for Si570 for LZ1DPN-CW3 Transmitter
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -36,7 +36,7 @@ Adafruit_SSD1306 display(OLED_RESET);
 Si570 *vfo;
 
 //Setup some items
-#define CW_TIMEOUT (100l) // in milliseconds, this is the parameter that determines how long the tx will hold between cw key downs
+#define CW_TIMEOUT (1200l) // in milliseconds, this is the parameter that determines how long the tx will hold between cw key downs
 unsigned long cwTimeout = 0;     //keyer var - dead operator control
 
 #define TX_RX (12)   //mute + (+12V) relay - antenna switch relay TX/RX, and +V in TX for PA - RF Amplifier (2 sided 2 possition relay)
@@ -45,18 +45,20 @@ unsigned long cwTimeout = 0;     //keyer var - dead operator control
 #define FBUTTON (A0)  // tuning step freq CHANGE from 1Hz to 1MHz step for single rotary encoder possition
 #define ANALOG_KEYER (A1)  // KEYER input - for analog straight key
 #define BTNDEC (A2)  // BAND CHANGE BUTTON from 1,8 to 29 MHz - 11 bands
-#define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
-#define RADIONO_VERSION "cw-transmitter"
+//#define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
+#define RADIONO_VERSION "LZ1DPN-CW3"
 
 Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be interrupt pins.
 
 char inTx = 0;     // trx in transmit mode temp var
 char keyDown = 0;   // keyer down temp vat  
-int_fast32_t xit=1200; // RIT +600 Hz
+int_fast32_t xit=1200; // TX offset
 int_fast32_t rx=7000000; // Starting frequency of VFO
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
-//int_fast32_t rxof=800;
-//int_fast32_t rxif=(6000000-rxof); // IF freq, will be summed with vfo freq - rx variable, my xtal filter now is made from 6 MHz xtals
+int_fast32_t rxof=800;  // RX offset
+int_fast32_t freqIF=12000000; //crystal filter freq
+int_fast32_t rxif=(freqIF - rxof); // IF freq, will be summed with vfo freq - rx variable
+
 int_fast32_t rxRIT=0;
 int RITon=0;
 int_fast32_t increment = 50; // starting VFO update increment in HZ. tuning step
@@ -64,11 +66,11 @@ int buttonstate = 0;   // temp var
 String hertz = "50 Hz";
 int  hertzPosition = 0;
 
-byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
+// byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
 String freq; // string to hold the frequency
-int_fast32_t timepassed = millis(); // int to hold the arduino miilis since startup
-int byteRead = 0;
-int var_i = 0;
+// int_fast32_t timepassed = millis(); // int to hold the arduino miilis since startup
+// int byteRead = 0;
+// int var_i = 0;
 
 // buttons temp var
 int BTNdecodeON = 0;   
@@ -81,41 +83,41 @@ void checkCW(){
   pinMode(TX_RX, OUTPUT);
   if (keyDown == 0 && analogRead(ANALOG_KEYER) < 50){
     //switch to transmit mode if we are not already in it
-    if (inTx == 0){
-      //put the TX_RX line to transmit
-      digitalWrite(TX_RX, 1);
-    }
+    digitalWrite(TX_RX, 1);
+    delay(5);  //give the relays a few ms to settle the T/R relays
     inTx = 1;
     keyDown = 1;
-//     rxif = (-rxRIT);  // in tx freq +600Hz and minus +-RIT 
-//     sendFrequency(rx);
+    rxif = (-rxRIT);  // in tx freq +600Hz and minus +-RIT 
+    sendFrequency(rx);
     digitalWrite(CW_KEY, 1); //start the side-tone
   }
 
-  //reset the timer as long as the key is down
+//reset the timer as long as the key is down
   if (keyDown == 1){
      cwTimeout = CW_TIMEOUT + millis();
   }
 
-  //if we have a keyup
+//if we have a keyup
   if (keyDown == 1 && analogRead(ANALOG_KEYER) > 150){
     keyDown = 0;
-  	inTx = 0;    /// NEW
-//	  rxif = (6000000-rxof);  /// NEW
-//	  sendFrequency(rx);  /// NEW
+  	inTx = 0;   
     digitalWrite(CW_KEY, 0);  // stop the side-tone
+    delay(5);  //give the relays a few ms to settle the T/R relays
+	  rxif = (freqIF - rxof);  
+	  sendFrequency(rx); 
     digitalWrite(TX_RX, 0);
     cwTimeout = millis() + CW_TIMEOUT;
   }
 
-  //if we have keyuup for a longish time while in cw rx mode
-  if (inTx == 1 && cwTimeout < millis()){
+//if we have keyuup for a longish time while in cw rx mode
+  if ((inTx == 1) && (millis() > cwTimeout)){
     //move the radio back to receive
     digitalWrite(TX_RX, 0);
   	digitalWrite(CW_KEY, 0);
     inTx = 0;
-//    rxif = (6000000-rxof);
-//    sendFrequency(rx);
+    keyDown = 0;
+    rxif = (freqIF - rxof);
+    sendFrequency(rx);
     cwTimeout = 0;
   }
 }
@@ -137,7 +139,7 @@ digitalWrite(FBUTTON,HIGH);  //level
 
 // Initialize the Serial port so that we can use it for debugging
   Serial.begin(115200);
-  Serial.println("Start VFO ver 14.0");
+  Serial.println("Start VFO ver 15.0");
   debug("Radiono starting - Version: %s", RADIONO_VERSION);
 
 #ifdef RUN_TESTS
@@ -156,7 +158,7 @@ digitalWrite(FBUTTON,HIGH);  //level
 
   //set the initial frequency
   vfo->setFrequency(26150000L);
-  vfo->setFrequency(rx+xit);
+  vfo->setFrequency(rx+rxif+rxRIT);
   
   // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
@@ -232,7 +234,7 @@ if (result) {
 
 // frequency calc from datasheet page 8 = <sys clock> * <frequency tuning word>/2^32
 void sendFrequency(double frequency) {  
-      vfo->setFrequency(frequency + xit);
+      vfo->setFrequency(frequency + rxif + rxRIT);
   }
 
 // step increments for rotary encoder button
