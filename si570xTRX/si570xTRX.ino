@@ -32,7 +32,7 @@ Adafruit_SSD1306 display(OLED_RESET);
 #include <avr/io.h>
 #include "Si570.h"
 #include "debug.h"
-#define SI570_I2C_ADDRESS 0x55
+//#define SI570_I2C_ADDRESS 0x55
 Si570 *vfo;
 
 //Setup some items
@@ -46,7 +46,7 @@ unsigned long cwTimeout = 0;     //keyer var - dead operator control
 #define ANALOG_KEYER (A1)  // KEYER input - for analog straight key
 #define BTNDEC (A2)  // BAND CHANGE BUTTON from 1,8 to 29 MHz - 11 bands
 //#define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
-#define RADIONO_VERSION "LZ1DPN-CW3"
+//#define RADIONO_VERSION "LZ1DPN-CW3"
 
 Rotary r = Rotary(2,3); // sets the pins for rotary encoder uses.  Must be interrupt pins.
 
@@ -55,15 +55,15 @@ char keyDown = 0;   // keyer down temp vat
 int_fast32_t xit=1200; // TX offset
 int_fast32_t rx=7000000; // Starting frequency of VFO
 int_fast32_t rx2=1; // temp variable to hold the updated frequency
-int_fast32_t rxof=800;  // RX offset
+int_fast32_t rxof=700;  // RX offset//800
 int_fast32_t freqIF=12000000; //crystal filter freq
 int_fast32_t rxif=(freqIF - rxof); // IF freq, will be summed with vfo freq - rx variable
 
 int_fast32_t rxRIT=0;
 int RITon=0;
-int_fast32_t increment = 50; // starting VFO update increment in HZ. tuning step
+int_fast32_t increment = 100; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
-String hertz = "50 Hz";
+String hertz = "100 Hz";
 int  hertzPosition = 0;
 
 // byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
@@ -126,6 +126,27 @@ void checkCW(){
 
 void setup() {
 
+ // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
+  
+  // Show image buffer on the display hardware.
+  // Since the buffer is intialized with an Adafruit splashscreen
+  // internally, this will display the splashscreen.
+  display.display();
+
+  // Clear the buffer.
+  display.clearDisplay();  
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  display.setCursor(0,0);
+  display.println(rx);
+  display.setTextSize(1);
+  display.setCursor(0,16);
+  display.print("St:");display.print(hertz);
+  display.setCursor(64,16);
+  display.print("rit:");display.print(rxRIT);
+  display.display();
+
 //set up the pins in/out and logic levels
 pinMode(TX_RX, OUTPUT);
 digitalWrite(TX_RX, LOW);
@@ -140,48 +161,28 @@ digitalWrite(FBUTTON,HIGH);  //level
 // Initialize the Serial port so that we can use it for debugging
   Serial.begin(115200);
   Serial.println("Start VFO ver 15.0");
-  debug("Radiono starting - Version: %s", RADIONO_VERSION);
+//  debug("Radiono starting - Version: %s", RADIONO_VERSION);
 
-#ifdef RUN_TESTS
-  run_tests();
-#endif
+//#ifdef RUN_TESTS
+//  run_tests();
+//#endif
 
-  vfo = new Si570(SI570_I2C_ADDRESS, 56320000);
+  vfo = new Si570(0x55, 56320000);
 
-  if (vfo->status == SI570_ERROR) {
-    Serial.println("Si570 comm error");
-    delay(10000);
-  }
+//  if (vfo->status == SI570_ERROR) {
+//    Serial.println("Si570 comm error");
+//    delay(10000);
+//  }
 
   // This will print some debugging info to the serial console.
-  vfo->debugSi570();
+//  vfo->debugSi570();
 
   //set the initial frequency
   vfo->setFrequency(26150000L);
   vfo->setFrequency(rx+rxif+rxRIT);
+  Serial.println(rx);
   
-  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
-  
-  // Show image buffer on the display hardware.
-  // Since the buffer is intialized with an Adafruit splashscreen
-  // internally, this will display the splashscreen.
-  display.display();
-
-  // Clear the buffer.
-  display.clearDisplay();	
-	display.setTextSize(2);
-	display.setTextColor(WHITE);
-	display.setCursor(0,0);
-	display.println(rx);
-	display.setTextSize(1);
-	display.setCursor(0,16);
-	display.print("St:");display.print(hertz);
-	display.setCursor(64,16);
-	display.print("rit:");display.print(rxRIT);
-	display.display();
-
-//  rotary
+ //  rotary
   PCICR |= (1 << PCIE2);
   PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
   sei();
@@ -191,6 +192,7 @@ digitalWrite(FBUTTON,HIGH);  //level
 ///// START LOOP - MAIN LOOP
 
 void loop() {
+//  showFreq();
 	checkCW();   // when pres keyer
 	checkBTNdecode();  // BAND change
 	
@@ -235,21 +237,22 @@ if (result) {
 // frequency calc from datasheet page 8 = <sys clock> * <frequency tuning word>/2^32
 void sendFrequency(double frequency) {  
       vfo->setFrequency(frequency + rxif + rxRIT);
+//      Serial.println(frequency);
   }
 
 // step increments for rotary encoder button
 void setincrement(){
-  if(increment == 0){increment = 1; hertz = "1Hz"; hertzPosition=0;RITon=0;} 
-  else if(increment == 1){increment = 10; hertz = "10Hz"; hertzPosition=0;RITon=0;}
+  if(increment == 0){increment = 10; hertz = "10Hz"; hertzPosition=0;RITon=0;} 
+//  else if(increment == 1){increment = 10; hertz = "10Hz"; hertzPosition=0;RITon=0;}
   else if(increment == 10){increment = 50; hertz = "50Hz"; hertzPosition=0;RITon=0;}
   else if (increment == 50){increment = 100;  hertz = "100Hz"; hertzPosition=0;RITon=0;}
   else if (increment == 100){increment = 500; hertz="500Hz"; hertzPosition=0;RITon=0;}
-  else if (increment == 500){increment = 1000; hertz="1Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 1000){increment = 2500; hertz="2.5Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 2500){increment = 5000; hertz="5Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 5000){increment = 10000; hertz="10Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 10000){increment = 100000; hertz="100Khz"; hertzPosition=0;RITon=0;}
-  else if (increment == 100000){increment = 1000000; hertz="1Mhz"; hertzPosition=0;RITon=0;} 
+//  else if (increment == 500){increment = 1000000; hertz="1MHz"; hertzPosition=0;RITon=0;}
+//  else if (increment == 1000){increment = 2500; hertz="2.5Khz"; hertzPosition=0;RITon=0;}
+//  else if (increment == 2500){increment = 5000; hertz="5Khz"; hertzPosition=0;RITon=0;}
+//  else if (increment == 5000){increment = 10000; hertz="10Khz"; hertzPosition=0;RITon=0;}
+//  else if (increment == 10000){increment = 100000; hertz="100Khz"; hertzPosition=0;RITon=0;}
+  else if (increment == 500){increment = 1000000; hertz="1Mhz"; hertzPosition=0;RITon=0;} 
   else{increment = 0; hertz = "ritON"; hertzPosition=0; RITon=1;};  
   showFreq();
   delay(250); // Adjust this delay to speed up/slow down the button menu scroll speed.
@@ -278,19 +281,16 @@ BTNdecodeON = digitalRead(BTNDEC);
          BTNinc = BTNinc + 1;
          
          if(BTNinc > 7){
-              BTNinc = 2;
+              BTNinc = 4;
               }
               
           switch (BTNinc) {
-          case 1:
-            rx=1810000;
-            break;
-          case 2:
-            rx=3500000;
-            break;
-          case 3:
-            rx=5250000;
-            break;
+//          case 2:
+//            rx=3500000;
+//            break;
+//          case 3:
+//            rx=5250000;
+//            break;
           case 4:
             rx=7000000;
             break;
@@ -303,18 +303,9 @@ BTNdecodeON = digitalRead(BTNDEC);
           case 7:
             rx=18068000;
             break;    
-          case 8:
-            rx=21000000;
-            break;    
-          case 9:
-            rx=24890000;
-            break;    
-          case 10:
-            rx=28000000;
-            break;
-          case 11:
-            rx=29100000;
-            break;        
+//          case 8:
+//            rx=21000000;
+//            break;        
           default:             
             break;
         }         
@@ -323,12 +314,12 @@ BTNdecodeON = digitalRead(BTNDEC);
 }
 
 ///
-
+/*
 #ifdef RUN_TESTS
 bool run_tests() {
-  /* Those tests check that the Si570 libary is able to understand the
-   * register values provided and do the required math with them.
-   */
+  // Those tests check that the Si570 libary is able to understand the
+  // register values provided and do the required math with them.
+  //
   // Testing for thomas - si570
   {
     uint8_t registers[] = { 0xe1, 0xc2, 0xb5, 0x7c, 0x77, 0x70 };
@@ -359,8 +350,8 @@ void __assert(const char *__func, const char *__file, int __lineno, const char *
   abort();
 }
 #endif
+*/
 
-///
 
 
 //// OK END OF PROGRAM
