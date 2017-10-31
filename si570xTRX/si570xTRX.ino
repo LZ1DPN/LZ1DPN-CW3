@@ -22,7 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Include the library code
 //#include <SPI.h>
-//#include <Wire.h>
+#include <Wire.h>
 #include <rotary.h>
 //#include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -192,8 +192,7 @@ digitalWrite(FBUTTON,HIGH);  //level
 ///// START LOOP - MAIN LOOP
 
 void loop() {
-//  showFreq();
-	checkCW();   // when pres keyer
+//	checkCW();   // when pres keyer
 	checkBTNdecode();  // BAND change
 	
 // freq change 
