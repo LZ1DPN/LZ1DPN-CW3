@@ -21,8 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 // Include the library code
-//#include <Wire.h>
+//#include <SPI.h>
+#include <Wire.h>
 #include <rotary.h>
+//#include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #define OLED_RESET 5
 Adafruit_SSD1306 display(OLED_RESET);
@@ -30,7 +32,7 @@ Adafruit_SSD1306 display(OLED_RESET);
 #include <avr/io.h>
 #include "Si570.h"
 #include "debug.h"
-#define SI570_I2C_ADDRESS 0x55
+//#define SI570_I2C_ADDRESS 0x55
 Si570 *vfo;
 
 //Setup some items
@@ -39,12 +41,14 @@ unsigned long cwTimeout = 0;     //keyer var - dead operator control
 
 #define TX_RX (12)   //mute + (+12V) relay - antenna switch relay TX/RX, and +V in TX for PA - RF Amplifier (2 sided 2 possition relay)
 #define CW_KEY (4)   // KEY output pin - in Q7 transistor colector (+5V when keyer down for RF signal modulation) (in Minima to enable sidetone generator on)
+//#define BAND_HI (6)  // relay for RF output LPF  - (0) < 10 MHz , (1) > 10 MHz (see LPF in EK1A schematic)  
 #define FBUTTON (A0)  // tuning step freq CHANGE from 1Hz to 1MHz step for single rotary encoder possition
 #define ANALOG_KEYER (A1)  // KEYER input - for analog straight key
 #define BTNDEC (A2)  // BAND CHANGE BUTTON from 1,8 to 29 MHz - 11 bands
 //#define pulseHigh(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW); }
+//#define RADIONO_VERSION "LZ1DPN-CW3"
 
-Rotary r = Rotary(3,2); // sets the pins for rotary encoder uses.  Must be interrupt pins. Reverce pins to (2,3) if need
+Rotary r = Rotary(3,2); // sets the pins for rotary encoder uses.  Must be interrupt pins.
 
 char inTx = 0;     // trx in transmit mode temp var
 char keyDown = 0;   // keyer down temp vat  
@@ -64,13 +68,19 @@ int  hertzPosition = 0;
 
 // byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
 String freq; // string to hold the frequency
+// int_fast32_t timepassed = millis(); // int to hold the arduino miilis since startup
+// int byteRead = 0;
+// int var_i = 0;
 
 // buttons temp var
 int BTNdecodeON = 0;   
+//int BTNlaststate = 0;
+//int BTNcheck = 0;
+//int BTNcheck2 = 0;
 int BTNinc = 3; // set number of default band minus 1
 
 void checkCW(){
-//  pinMode(TX_RX, OUTPUT);
+  pinMode(TX_RX, OUTPUT);
   if (keyDown == 0 && analogRead(ANALOG_KEYER) < 50){
     //switch to transmit mode if we are not already in it
     digitalWrite(TX_RX, 1);
@@ -170,7 +180,7 @@ digitalWrite(FBUTTON,HIGH);  //level
   //set the initial frequency
   vfo->setFrequency(26150000L);
   vfo->setFrequency(rx+rxif+rxRIT);
-//  Serial.println(rx);
+  Serial.println(rx);
   
  //  rotary
   PCICR |= (1 << PCIE2);
@@ -247,7 +257,6 @@ void setincrement(){
   delay(250); // Adjust this delay to speed up/slow down the button menu scroll speed.
 }
 
-
 // oled display functions
 void showFreq(){
 	display.clearDisplay();	
@@ -262,7 +271,6 @@ void showFreq(){
 	display.print("rit:");display.print(rxRIT);
 	display.display();
 }
-
 
 //  BAND CHANGE !!! band plan - change if need 
 void checkBTNdecode(){

@@ -182,7 +182,7 @@ digitalWrite(FBUTTON,HIGH);  //level
 ///// START LOOP - MAIN LOOP
 
 void loop() {
-	checkCW();   // when pres keyer
+//	checkCW();   // when pres keyer
 	checkBTNdecode();  // BAND change
 	
 // freq change 

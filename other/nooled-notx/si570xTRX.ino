@@ -23,9 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Include the library code
 //#include <Wire.h>
 #include <rotary.h>
-#include <Adafruit_SSD1306.h>
+//#include <Adafruit_SSD1306.h>
 #define OLED_RESET 5
-Adafruit_SSD1306 display(OLED_RESET);
+//Adafruit_SSD1306 display(OLED_RESET);
 
 #include <avr/io.h>
 #include "Si570.h"
@@ -117,25 +117,25 @@ void checkCW(){
 void setup() {
 
  // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
+//  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
   
   // Show image buffer on the display hardware.
   // Since the buffer is intialized with an Adafruit splashscreen
   // internally, this will display the splashscreen.
-  display.display();
+//  display.display();
 
   // Clear the buffer.
-  display.clearDisplay();  
-  display.setTextSize(2);
-  display.setTextColor(WHITE);
-  display.setCursor(0,0);
-  display.println(rx);
-  display.setTextSize(1);
-  display.setCursor(0,16);
-  display.print("St:");display.print(hertz);
-  display.setCursor(64,16);
-  display.print("rit:");display.print(rxRIT);
-  display.display();
+//  display.clearDisplay();  
+//  display.setTextSize(2);
+//  display.setTextColor(WHITE);
+//  display.setCursor(0,0);
+//  display.println(rx);
+//  display.setTextSize(1);
+//  display.setCursor(0,16);
+//  display.print("St:");display.print(hertz);
+//  display.setCursor(64,16);
+//  display.print("rit:");display.print(rxRIT);
+//  display.display();
 
 //set up the pins in/out and logic levels
 pinMode(TX_RX, OUTPUT);
@@ -182,12 +182,12 @@ digitalWrite(FBUTTON,HIGH);  //level
 ///// START LOOP - MAIN LOOP
 
 void loop() {
-	checkCW();   // when pres keyer
+//	checkCW();   // when pres keyer
 	checkBTNdecode();  // BAND change
 	
 // freq change 
   if ((rx != rx2) || (RITon == 1)){
-	    showFreq();
+//	    showFreq();
       sendFrequency(rx);
       rx2 = rx;
       }
@@ -243,11 +243,11 @@ void setincrement(){
 //  else if (increment == 10000){increment = 100000; hertz="100Khz"; hertzPosition=0;RITon=0;}
   else if (increment == 500){increment = 1000000; hertz="1Mhz"; hertzPosition=0;RITon=0;} 
   else{increment = 0; hertz = "ritON"; hertzPosition=0; RITon=1;};  
-  showFreq();
+//  showFreq();
   delay(250); // Adjust this delay to speed up/slow down the button menu scroll speed.
 }
 
-
+/*
 // oled display functions
 void showFreq(){
 	display.clearDisplay();	
@@ -262,7 +262,7 @@ void showFreq(){
 	display.print("rit:");display.print(rxRIT);
 	display.display();
 }
-
+*/
 
 //  BAND CHANGE !!! band plan - change if need 
 void checkBTNdecode(){
