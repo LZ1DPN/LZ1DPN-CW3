@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Include the library code
 #include <SPI.h>
+#include <Wire.h>
 #include <rotary.h>
 #include <Adafruit_SSD1306.h>
 #define OLED_RESET 5   //12
@@ -33,7 +34,7 @@ const int SQUARE = 0x2028;                  // When we update the frequency, we 
 const int TRIANGLE = 0x2002;                // define the waveform when we end writing.    
 
 int wave = 0;
-int waveType = SINE;
+int waveType = SQUARE;
 int wavePin = 7;
 
 #define CW_TIMEOUT (600l) // in milliseconds, this is the parameter that determines how long the tx will hold between cw key downs
@@ -62,9 +63,9 @@ unsigned long freqIF=12000000;
 //unsigned long rxif=(freqIF-rxof); // IF freq, will be summed with vfo freq - rx variable, my xtal filter now is made from 6 MHz xtals
 unsigned long rxRIT=0;
 int RITon=0;
-unsigned long increment = 100; // starting VFO update increment in HZ. tuning step
+unsigned long increment = 500; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
-String hertz = "100Hz";
+String hertz = "500Hz";
 int  hertzPosition = 0;
 
 //byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
@@ -72,7 +73,7 @@ String freq; // string to hold the frequency
 
 // buttons temp var
 int BTNdecodeON = 0;   
-int BTNinc = 3; // set number of default band minus 1
+int BTNinc = 5; // set number of default band minus 1
 
 // start variable setup
 
@@ -93,7 +94,7 @@ pinMode(FBUTTON,INPUT); // Connect to a button that goes to GND on push - rotary
 digitalWrite(FBUTTON,HIGH);  //level
 
 // Initialize the Serial port so that we can use it for debugging
-//Serial.begin(115200);
+Serial.begin(115200);
   
 // Can't set SPI MODE here because the display and the AD9833 use different MODES.
 SPI.begin();
@@ -103,7 +104,7 @@ delay(50);
   delay(50);
   AD9833setFrequency((rx-freqIF), SQUARE);                  // Set the frequency and Sine Wave output
   
-  //  Serial.println("Start VFO ver 12.0");
+  Serial.println("Start VFO ver 12.0");
 
   // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
@@ -132,19 +133,22 @@ delay(50);
   sei();
   
     AD9833setFrequency((rx-freqIF), SQUARE);     // Set AD9833 to frequency and selected wave type.
+	Serial.println("Start VFO ver 12.0 cw 3.0");
+	Serial.println(rx);
     delay(50);
 }
 
 ///// START LOOP - MAIN LOOP
 
 void loop() {
-	checkCW();   		// when pres keyer
-	checkBTNdecode();  // BAND change
+//	checkCW();   		// when pres keyer
+//	checkBTNdecode();  // BAND change
 	
 // freq change 
   if ((rx != rx2) || (RITon == 1)){
 	    showFreq();
       AD9833setFrequency((rx-freqIF), SQUARE);     // Set AD9833 to frequency and selected wave type.
+  	  Serial.println(rx);
       rx2 = rx;
       }
 
@@ -205,6 +209,7 @@ void showFreq(){
 	display.setCursor(64,16);
 	display.print("rit:");display.print(rxRIT);
 	display.display();
+//	Serial.println(rx);
 }
 
 // AD9833 documentation advises a 'Reset' on first applying power.
