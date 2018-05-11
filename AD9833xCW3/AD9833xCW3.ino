@@ -11,7 +11,7 @@ Revision 8.0 - December 12, 2016  - EK1A trx end revision. Setup last hardware c
 Revision 9.0 - January 07, 2017  - EK1A trx last revision. Remove not worked bands ... trx work well on 3.5, 5, 7, 10, 14 MHz (LZ1DPN mod)
 Revision 10.0 - March 13, 2017 	 - scan function
 Revision 11.0 - October 22, 2017 	 - RIT + other - other
-Revision 12.0 - January 22, 2018  - support AD9833 oscillator (VFO for NorCal NC40a/2018) (49-er/2018) (LZ1DPN-CW3/2018)
+Revision 12.0 - January 22, 2018  - support AD9833 oscillator (VFO for NorCal NC40a/2018) (49-er/2018)
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Include the library code
 #include <SPI.h>
-#include <Wire.h>
 #include <rotary.h>
 #include <Adafruit_SSD1306.h>
 #define OLED_RESET 5   //12
@@ -39,8 +38,8 @@ int wavePin = 7;
 
 #define CW_TIMEOUT (600l) // in milliseconds, this is the parameter that determines how long the tx will hold between cw key downs
 unsigned long cwTimeout = 0;     //keyer var - dead operator control
-#define TX_RX (12)          // mute + (+12V) relay - antenna switch relay TX/RX, and +V in TX for PA - RF Amplifier (2 sided 2 possition relay)
-#define CW_KEY (4)   // KEY output pin - in Q7 transistor colector (+5V when keyer down for RF signal modulation) (in Minima to enable sidetone generator on)
+#define TX_RX (4)          // mute + (+12V) relay - antenna switch relay TX/RX, and +V in TX for PA - RF Amplifier (2 sided 2 possition relay)
+#define CW_KEY (6)   // KEY output pin - in Q7 transistor colector (+5V when keyer down for RF signal modulation) (in Minima to enable sidetone generator on)
 #define FBUTTON (A0)       // tuning step freq CHANGE from 1Hz to 1MHz step for single rotary encoder possition
 #define ANALOG_KEYER (A1)  // KEYER input - for analog straight key
 #define BTNDEC (A2)        // BAND CHANGE BUTTON from 1,8 to 29 MHz - 11 bands
@@ -63,9 +62,9 @@ unsigned long freqIF=12000000;
 //unsigned long rxif=(freqIF-rxof); // IF freq, will be summed with vfo freq - rx variable, my xtal filter now is made from 6 MHz xtals
 unsigned long rxRIT=0;
 int RITon=0;
-unsigned long increment = 500; // starting VFO update increment in HZ. tuning step
+unsigned long increment = 50; // starting VFO update increment in HZ. tuning step
 int buttonstate = 0;   // temp var
-String hertz = "500Hz";
+String hertz = "50Hz";
 int  hertzPosition = 0;
 
 //byte ones,tens,hundreds,thousands,tenthousands,hundredthousands,millions ;  //Placeholders
@@ -73,7 +72,7 @@ String freq; // string to hold the frequency
 
 // buttons temp var
 int BTNdecodeON = 0;   
-int BTNinc = 5; // set number of default band minus 1
+int BTNinc = 1; // set number of default band minus 1
 
 // start variable setup
 
@@ -102,9 +101,9 @@ delay(50);
 
   AD9833reset();                                   // Reset AD9833 module after power-up.
   delay(50);
-  AD9833setFrequency((rx-freqIF), SQUARE);                  // Set the frequency and Sine Wave output
+  AD9833setFrequency(((rx-freqIF)+rxRIT), SQUARE);                  // Set the frequency and Sine Wave output
   
-  Serial.println("Start VFO ver 12.0");
+  //  Serial.println("Start VFO ver 11.0");
 
   // by default, we'll generate the high voltage from the 3.3v line internally! (neat!)
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C address 0x3C (for oled 128x32)
@@ -115,7 +114,7 @@ delay(50);
   display.display();
 
   // Clear the buffer.
-	display.clearDisplay();	
+  display.clearDisplay();	
 	display.setTextSize(2);
 	display.setTextColor(WHITE);
 	display.setCursor(0,0);
@@ -132,23 +131,20 @@ delay(50);
   PCMSK2 |= (1 << PCINT18) | (1 << PCINT19);
   sei();
   
-    AD9833setFrequency((rx-freqIF), SQUARE);     // Set AD9833 to frequency and selected wave type.
-	Serial.println("Start VFO ver 12.0 cw 3.0");
-	Serial.println(rx);
+    AD9833setFrequency(((rx-freqIF)+rxRIT), SQUARE);     // Set AD9833 to frequency and selected wave type.
     delay(50);
 }
 
 ///// START LOOP - MAIN LOOP
 
 void loop() {
-//	checkCW();   		// when pres keyer
-//	checkBTNdecode();  // BAND change
+	checkBTNdecode();  // BAND change
+	checkCW();   		// when pres keyer
 	
 // freq change 
   if ((rx != rx2) || (RITon == 1)){
-	    showFreq();
-      AD9833setFrequency((rx-freqIF), SQUARE);     // Set AD9833 to frequency and selected wave type.
-  	  Serial.println(rx);
+	  showFreq();
+      AD9833setFrequency(((rx-freqIF)+rxRIT), SQUARE);     // Set AD9833 to frequency and selected wave type.
       rx2 = rx;
       }
 
@@ -203,13 +199,13 @@ void showFreq(){
 	display.setTextColor(WHITE);
 	display.setCursor(0,0);
 	display.println(rx);
+	Serial.println(rx);
 	display.setTextSize(1);
 	display.setCursor(0,16);
 	display.print("St:");display.print(hertz);
 	display.setCursor(64,16);
 	display.print("rit:");display.print(rxRIT);
 	display.display();
-//	Serial.println(rx);
 }
 
 // AD9833 documentation advises a 'Reset' on first applying power.
@@ -260,8 +256,8 @@ BTNdecodeON = digitalRead(BTNDEC);
     if(BTNdecodeON == LOW){
          BTNinc = BTNinc + 1;
          
-         if(BTNinc > 11){
-              BTNinc = 5;
+         if(BTNinc > 6){
+              BTNinc = 3;
               }
               
           switch (BTNinc) {
@@ -336,7 +332,7 @@ void checkCW(){
      inTx = 0; 
      digitalWrite(CW_KEY, 0);  // stop the side-tone
      digitalWrite(TX_RX, 0);
-     AD9833setFrequency((rx-freqIF), SQUARE);     // Set AD9833 to frequency and selected wave type.
+	 AD9833setFrequency(((rx-freqIF)+rxRIT), SQUARE);     // Set AD9833 to frequency and selected wave type.
      cwTimeout = millis() + CW_TIMEOUT;
   }
 
@@ -345,7 +341,7 @@ void checkCW(){
      //move the radio back to receive
 	digitalWrite(CW_KEY, 0);
     digitalWrite(TX_RX, 0);
-    AD9833setFrequency((rx-freqIF), SQUARE);     // Set AD9833 to frequency and selected wave type.
+	AD9833setFrequency(((rx-freqIF)+rxRIT), SQUARE);     // Set AD9833 to frequency and selected wave type.
     inTx = 0;
     cwTimeout = 0;
   }
