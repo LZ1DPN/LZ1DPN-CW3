@@ -219,6 +219,15 @@ if (result) {
 		else {
 		  rxRIT=rxRIT-50;
 	 	  }
+	if (RITon==2){
+		if (result == DIR_CW){
+		  freqIF=freqIF+1000000;
+		  rxif=(freqIF - rxof)
+		  }
+		else {
+		  freqIF=freqIF-1000000;
+		  rxif=(freqIF - rxof)
+	 	  }
   } 
 }
 }
@@ -242,6 +251,7 @@ void setincrement(){
 //  else if (increment == 5000){increment = 10000; hertz="10Khz"; hertzPosition=0;RITon=0;}
 //  else if (increment == 10000){increment = 100000; hertz="100Khz"; hertzPosition=0;RITon=0;}
   else if (increment == 500){increment = 1000000; hertz="1Mhz"; hertzPosition=0;RITon=0;} 
+  else if (increment == 1000000){increment = 10000000; hertz="Off"; hertzPosition=0;RITon=2;} 
   else{increment = 0; hertz = "ritON"; hertzPosition=0; RITon=1;};  
   showFreq();
   delay(250); // Adjust this delay to speed up/slow down the button menu scroll speed.
@@ -259,7 +269,12 @@ void showFreq(){
 	display.setCursor(0,16);
 	display.print("St:");display.print(hertz);
 	display.setCursor(64,16);
-	display.print("rit:");display.print(rxRIT);
+	if (RITon == 2){
+		display.print("Off:");display.print(freqIF);
+	}
+	else{ 
+		display.print("rit:");display.print(rxRIT);
+	}
 	display.display();
 }
 
